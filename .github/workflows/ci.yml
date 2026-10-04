@@ -55,3 +55,30 @@ jobs:
           docker tag ai-devops-app "$DOCKERHUB_USERNAME/ai-devops-app:${{ github.sha }}"
           docker push "$DOCKERHUB_USERNAME/ai-devops-app:latest"
           docker push "$DOCKERHUB_USERNAME/ai-devops-app:${{ github.sha }}"
+
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+    steps:
+      - name: Pull the published image
+        run: docker pull "$DOCKERHUB_USERNAME/ai-devops-app:${{ github.sha }}"
+
+      - name: Start the container
+        run: docker run -d --name app -p 8000:8000 "$DOCKERHUB_USERNAME/ai-devops-app:${{ github.sha }}"
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 15); do
+            if curl -fsS http://localhost:8000/health; then
+              echo
+              echo "App is healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Health check failed"
+          docker logs app
+          exit 1
