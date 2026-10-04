@@ -28,3 +28,13 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t ai-devops-app .
+
+      - name: Scan image with Trivy
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            ghcr.io/aquasecurity/trivy:0.69.2 image \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 1 \
+            ai-devops-app
